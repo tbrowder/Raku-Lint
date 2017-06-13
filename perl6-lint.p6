@@ -41,10 +41,10 @@ die "FATAL: No files entered.\n" if !@ifils;
 #      begin, end, open, close
 # analysis is done after parsing (????)
 my %h;
-my $nopen;  # number of types: open
-my $nclose; # number of types: close
-my %nbegin; # number of types: begin
-my %nend;   # number of types: end
+my $nopen  = 0; # number of types: open
+my $nclose = 0; # number of types: close
+my $nbegin = 0; # number of types: begin
+my $end    = 0; # number of types: end
 
 for @ifils -> $f {
     say "DEBUG:  Linting file '$f'..." if $debug;
@@ -52,14 +52,22 @@ for @ifils -> $f {
 	++$linenum;
         when $line ~~ /:i ^ \s* '=' (begin|end) \s+ (<alpha><alnum>+) / {
 	    my $typ = ~$0;
+	    my $nam = ~$1;
             if $debug {
-		say "line $linenum: =$typ {~$1}";
+		say "line $linenum: =$typ $nam";
 		say "  a 'begin' type" if $typ ~~ /begin/;
 		say "  an 'end' type" if $typ ~~ /end/;
 	    }
 	    # a 'begin' or 'end' type
             # get the indentation amount
             my $indent = index $line, '=';
+	    %h{$linenum}<type>{$typ}<indent> = $indentation;
+	    %h{$linenum}<type>{$typ}<name>   = $nam;
+	    if $typ ~~ /begin/ {
+		++$nbegin;
+	    }
+	    else {
+	    }
         }
 
         when $line ~~ /:i (<<open>> | ':err' | ':out' ) / {
