@@ -44,7 +44,7 @@ my %h;
 my $nopen  = 0; # number of types: open
 my $nclose = 0; # number of types: close
 my $nbegin = 0; # number of types: begin
-my $end    = 0; # number of types: end
+my $nend   = 0; # number of types: end
 
 for @ifils -> $f {
     say "DEBUG:  Linting file '$f'..." if $debug;
@@ -61,12 +61,13 @@ for @ifils -> $f {
 	    # a 'begin' or 'end' type
             # get the indentation amount
             my $indent = index $line, '=';
-	    %h{$linenum}<type>{$typ}<indent> = $indentation;
+	    %h{$linenum}<type>{$typ}<indent> = $indent;
 	    %h{$linenum}<type>{$typ}<name>   = $nam;
 	    if $typ ~~ /begin/ {
 		++$nbegin;
 	    }
 	    else {
+		++$nend;
 	    }
         }
 
@@ -77,6 +78,7 @@ for @ifils -> $f {
 		say "  an 'open' type";
 	    }
 	    # an 'open' type
+	    ++$nopen;
         }
 
         when $line ~~ /:i (<<close>> | ':close' ) / {
@@ -86,6 +88,15 @@ for @ifils -> $f {
 		say "  a 'close' type";
 	    }
 	    # a 'close' type
+	    ++$nclose;
         }
     }
 }
+
+say "Normal end.";
+say qq:to/HERE/;
+  begin: $nbegin
+  end:   $nend
+  open:  $nopen
+  close: $nclose
+HERE
