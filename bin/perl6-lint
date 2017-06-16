@@ -2,7 +2,7 @@
 
 use lib <./lib>;
 
-use Perl6::Linter::Lite;
+use Perl6::Lint;
 
 if !@*ARGS {
     say "Usage: $*PROGRAM-NAME [options...] <files...>";
@@ -11,11 +11,15 @@ if !@*ARGS {
 
 my $debug = 0;
 my @ifils;
+my $ifil = 0;
 
 for @*ARGS -> $arg {
     if !$arg.IO.f  {
         if $arg ~~ /:i ^ d / {
             $debug = 1;
+        }
+        elsif !@ifils && !$ifil && $arg ~~ /:i ^ '--file=' (.+) / {
+            $ifil = ~$0;
         }
         else {
             say "FATAL:  Unknown arg '$arg'.";
@@ -25,7 +29,7 @@ for @*ARGS -> $arg {
     }
 
     # must be a file
-    @ifils.append: $arg;
+    @ifils.append: $arg if !$ifil;
 
 }
 
