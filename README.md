@@ -1,4 +1,4 @@
-# perl6-lint
+# App::Perl6::Lint
 
 Checks for some mistakes in Perl 6 files and modules. Currently checks for:
 
@@ -8,8 +8,8 @@ Checks for some mistakes in Perl 6 files and modules. Currently checks for:
 
 # SYNOPSIS
 
-  perl6-lint [options...] <file names...>
+   perl6-lint [options...] <file names...>
 
 or
 
-  perl6-lint [options...] --files=<file with list of files to check>
+   perl6-lint [options...] --files=<file with list of files to check>
