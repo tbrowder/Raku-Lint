@@ -47,8 +47,8 @@ die "FATAL: No files entered.\n" if !@ifils;
 my %h;
 my $nopen  = 0; # number of types: open
 my $nclose = 0; # number of types: close
-my $nbegin = 0; # number of types: begin
-my $nend   = 0; # number of types: end
+my %begin = 0; # number of types: begin
+my %end   = 0; # number of types: end
 
 for @ifils -> $f {
     say "DEBUG:  Linting file '$f'..." if $debug;
