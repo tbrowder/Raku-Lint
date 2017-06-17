@@ -68,10 +68,20 @@ for @ifils -> $f {
 	    %h{$linenum}<type>{$typ}<indent> = $indent;
 	    %h{$linenum}<type>{$typ}<name>   = $nam;
 	    if $typ ~~ /begin/ {
-		++$nbegin;
+                if %begin{$nam}:exists {
+                    ++%begin{$nam};
+                }
+                else {
+                    %begin{$nam} = 1;
+                }
 	    }
 	    else {
-		++$nend;
+                if %end{$nam}:exists {
+                    ++%end{$nam};
+                }
+                else {
+                    %end{$nam} = 1;
+                }
 	    }
         }
 
@@ -98,9 +108,15 @@ for @ifils -> $f {
 }
 
 say "Normal end.";
+for %begin.keys.sort -> $k {
+    my $v = %begin{$k};
+    say "begin $k: $v";
+}
+for %end.keys.sort -> $k {
+    my $v = %end{$k};
+    say "end $k: $v";
+}
 say qq:to/HERE/;
-  begin: $nbegin
-  end:   $nend
   open:  $nopen
   close: $nclose
 HERE
