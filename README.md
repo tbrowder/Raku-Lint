@@ -1,4 +1,5 @@
 # App::Perl6::Lint
+[![Build Status](https://travis-ci.org/tbrowder/App-Perl6-Lint.svg?branch=master)](https://travis-ci.org/tbrowder/App-Perl6-Lint)
 
 Checks for some mistakes in Perl 6 files and modules. Currently checks for:
 
