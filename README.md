@@ -13,3 +13,7 @@ Checks for some mistakes in Perl 6 files and modules. Currently checks for:
 or
 
    perl6-lint [options...] --files=<file with list of files to check>
+
+# SYSTEM REQUIREMENTS
+
++ ghostscript
