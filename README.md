@@ -14,6 +14,3 @@ or
 
    perl6-lint [options...] --files=<file with list of files to check>
 
-# SYSTEM REQUIREMENTS
-
-+ ghostscript
