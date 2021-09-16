@@ -5,14 +5,17 @@ unit module Raku::Lint;
 #    type is almost generic, list so far
 #      begin, end, open, close
 # analysis is done after parsing (????)
-my %h;
-my $nopen  = 0; # number of types: open
-my $nclose = 0; # number of types: close
-my %begin;      # number of types: begin
-my %end;        # number of types: end
 
-sub Lint(%ifils, :$ifil, :$verbose, :$debug) is export {
-    if $ifil {
+sub lint(:%ifils!, :$ifil, :$verbose, :$debug --> Str) is export {
+    # local vars
+    my %h;
+    my $nopen  = 0; # number of types: open
+    my $nclose = 0; # number of types: close
+    my %begin;      # number of types: begin
+    my %end;        # number of types: end
+
+    my Str $s = '';
+    if $ifil and $ifil.IO.r {
         # get the files out of the input file
         for $ifil.IO.lines -> $line {
             for $line.words -> $fil {
@@ -23,17 +26,16 @@ sub Lint(%ifils, :$ifil, :$verbose, :$debug) is export {
     }
 
     for %ifils.keys -> $f {
-	say "== Linting file '$f'...";
-	say "== Linting file '$f'..." if $verbose;
+	$s ~= "== Linting file '$f'...\n" if $verbose;
 	for $f.IO.lines.kv -> $linenum is copy, $line is copy {
 	    ++$linenum;
             when $line ~~ /:i ^ \s* '=' (begin|end) \s+ (<alpha><alnum>+) / {
 		my $typ = ~$0;
 		my $nam = ~$1;
 		if $verbose {
-		    say "line $linenum: =$typ $nam";
-		    say "  a 'begin' type" if $typ ~~ /begin/;
-		    say "  an 'end' type" if $typ ~~ /end/;
+		    $s ~= "line $linenum: =$typ $nam\n";
+		    $s ~= "  a 'begin' type\n" if $typ ~~ /begin/;
+		    $s ~= "  an 'end' type\n" if $typ ~~ /end/;
 		}
 		# a 'begin' or 'end' type
 		# get the indentation amount
@@ -48,7 +50,7 @@ sub Lint(%ifils, :$ifil, :$verbose, :$debug) is export {
 			%begin{$nam} = 1;
                     }
 		}
-		else {
+		elsif $typ ~~ /end/ {
                     if %end{$nam}:exists {
 			++%end{$nam};
                     }
@@ -61,8 +63,8 @@ sub Lint(%ifils, :$ifil, :$verbose, :$debug) is export {
             when $line ~~ /:i (<<open>> | ':err' | ':out' ) / {
 		my $typ = ~$0;
 		if $verbose {
-		    say "line $linenum: $typ";
-		    say "  an 'open' type";
+		    $s ~= "line $linenum: $typ\n";
+		    $s ~= "  an 'open' type\n";
 		}
 		# an 'open' type
 		++$nopen;
@@ -71,8 +73,8 @@ sub Lint(%ifils, :$ifil, :$verbose, :$debug) is export {
             when $line ~~ /:i (<<close>> | ':close' ) / {
 		my $typ = ~$0;
 		if $verbose {
-		    say "line $linenum: $typ";
-		    say "  a 'close' type";
+		    $s ~= "line $linenum: $typ\n";
+		    $s ~= "  a 'close' type\n";
 		}
 		# a 'close' type
 		++$nclose;
@@ -80,17 +82,19 @@ sub Lint(%ifils, :$ifil, :$verbose, :$debug) is export {
 	}
     }
 
-    say "Normal end.";
     for %begin.keys.sort -> $k {
 	my $v = %begin{$k};
-	say "  begin $k: $v";
+	$s ~= "  begin $k: $v\n";
     }
     for %end.keys.sort -> $k {
 	my $v = %end{$k};
-	say "  end $k: $v";
+	$s ~= "  end $k: $v\n";
     }
-    print qq:to/HERE/;
+
+    $s ~= qq:to/HERE/;
     open:  $nopen
     close: $nclose
     HERE
-}
+
+    $s
+} # sub lint

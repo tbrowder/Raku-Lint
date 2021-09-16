@@ -23,7 +23,6 @@
     "Lint"
   ],
   "test-depends": [
-    "Proc::Easy",
     "Test::META"
   ],
   "version": "0.1.0"

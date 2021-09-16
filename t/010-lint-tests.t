@@ -1,33 +1,17 @@
-use v6;
 use Test;
 
 use Raku::Lint;
-use Proc::Easy;
 
-plan 4;
+plan 9;
 
-my $s = q:to/HERE/;
-Normal end.
-  begin comment: 4
-  begin pod: 1
-  end comment: 4
-  end pod: 1
-open:  8
-close: 2
+my @opts = [
+    "", 
+    "-v", "--v", "-verbose", "--verbose", 
+    "-d", "--d", "-debug", "--debug",
+];
 
-HERE
-
-my $ostr;
-# need some small test files to test output with
-{
-    lives-ok {
-        $ostr = run-command "./bin/raku-lint ./t/data/raku-lint-test-script.raku", :out;
-    }
-    is $ostr, $s;
-}
-{
-    lives-ok {
-        $ostr = run-command "./bin/raku-lint -v ./t/data/raku-lint-test-script.raku", :out;
-    }
-    is $ostr, $s;
+for @opts -> $o {
+    lives-ok { 
+        shell "raku -Ilib ./bin/raku-lint $o ./t/data/raku-lint-test-script.raku > /dev/null"; 
+    }, "test option(s): '$o'"
 }

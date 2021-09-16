@@ -21,7 +21,7 @@ if !@*ARGS {
 }
 
 my $verbose = 0;
-my %ifils   = SetHash.new;
+my %ifils   = [];
 my $debug   = 0;
 my $ifil    = 0;
 for @*ARGS -> $arg {
@@ -43,8 +43,11 @@ for @*ARGS -> $arg {
     }
 
     # must be a file
-    %ifils{$arg}++;
-
+    unless $arg and $arg.IO.f {
+        say "FATAL: Arg '$arg' is not a file.";
+        exit;
+    }
+    %ifils{$arg} = 1;
 }
 
 my $tifil = 't/data/raku-lint-test-script.raku';
@@ -54,4 +57,5 @@ if $debug {
 
 die "FATAL: No files entered.\n" if !%ifils && !$ifil;
 
-Lint(%ifils, :$ifil, :$debug, :$verbose);
+my $ostr = lint(:%ifils, :$ifil, :$verbose, :$debug);
+say $ostr;
