@@ -1,8 +1,8 @@
 use v6;
 use Test;
 
-use Perl6::Lint;
+use Raku::Lint;
 
 plan 1;
 
-use-ok 'Perl6::Lint';
+use-ok 'Raku::Lint';

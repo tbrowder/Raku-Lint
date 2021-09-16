@@ -1,16 +1,59 @@
-# Perl6::Lint [![Build Status](https://travis-ci.org/tbrowder/Perl6-Lint.svg?branch=master)](https://travis-ci.org/tbrowder/Perl6-Lint)
+[![Actions Status](https://github.com/tbrowder/Raku-Lint/workflows/test/badge.svg)](https://github.com/tbrowder/Raku-Lint/actions)
 
-Checks for some mistakes in Perl 6 files and modules. Currently checks for:
+NAME
+====
 
-+ matching pod **=begin/=end** statements
+**Raku::Lint**
 
-+ matching file **open/close** statements
+Checks for some mistakes in Raku files and modules. Currently checks for:
 
-# SYNOPSIS
+  * matching pod `=begin/=end` statements
 
-   perl6-lint [options...] <file names...>
+  * matching file `open/close` statements
+
+SYNOPSIS
+========
+
+```raku
+    raku-lint [options...] <file names...>
+```
 
 or
 
-   perl6-lint [options...] --files=<file with list of files to check>
+```raku
+    raku-lint [options...] --files=<file with list of files to check>
+```
+
+DESCRIPTION
+===========
+
+The module includes the executable Raku program `raku-lint`. Its use is shown by executing it with no arguments, e.g.,
+
+```raku
+./raku-lint
+Usage: raku-lint [options...] <files to check...>
+
+Checks files for errors:
+
+  matching =begin/=end blocks
+  file opens without a close
+
+Options:
+
+  --file=X   Files listed in file X are added to the list of files
+               to check.
+  --verbose  Reports errors in detail to stdout.
+```
+
+AUTHOR
+======
+
+Tom Browder <tbrowder@cpan.org>
+
+COPYRIGHT and LICENSE
+=====================
+
+Copyright © 2021 Tom Browder
+
+This library is free software; you may redistribute or modify it under the Artistic License 2.0.
 

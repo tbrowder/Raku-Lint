@@ -1,10 +1,10 @@
-#!/usr/bin/env perl6
+#!/usr/bin/env raku
 
-use Perl6::Lint;
+use Raku::Lint;
 
 if !@*ARGS {
     say qq:to/HERE/;
-    Usage: $*PROGRAM-NAME [options...] <files to check...>
+    Usage: {$*PROGRAM.basename} [options...] <files to check...>
 
     Checks files for errors:
 
@@ -15,7 +15,7 @@ if !@*ARGS {
 
       --file=X   Files listed in file X are added to the list of files
                    to check.
-      --debug    Reports errors in detail to stdout.
+      --verbose  Reports findings in detail to stdout.
     HERE
     exit;
 }
@@ -26,11 +26,11 @@ my $debug   = 0;
 my $ifil    = 0;
 for @*ARGS -> $arg {
     if !$arg.IO.f  {
-        if $arg eq '-d' {
-            $debug = 1;
+        if $arg ~~ /:i ^ '-'? '-d' [ebug]? $/ {
+            ++$debug;
         }
-        elsif $arg eq '-v' {
-            $verbose = 1;
+        elsif $arg ~~ /:i ^ '-'? '-v' [erbose]? $/ {
+            ++$verbose;
         }
         elsif $arg ~~ /:i ^ '--file=' (.+) / {
             $ifil = ~$0;
@@ -47,7 +47,7 @@ for @*ARGS -> $arg {
 
 }
 
-my $tifil = 't/data/p6-lint-test-script.p6';
+my $tifil = 't/data/raku-lint-test-script.raku';
 if $debug {
     %ifils{$tifil}++;
 }

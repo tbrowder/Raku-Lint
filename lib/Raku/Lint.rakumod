@@ -1,4 +1,4 @@
-unit module Perl6::Lint;
+unit module Raku::Lint;
 
 # a hash to keep info, key on line number
 #  line number => type = 'value' # where value is name, or indentation, or '' if nothing of note
@@ -11,8 +11,7 @@ my $nclose = 0; # number of types: close
 my %begin;      # number of types: begin
 my %end;        # number of types: end
 
-sub Lint(%ifils, :$ifil, :$debug, :$verbose) is export {
-
+sub Lint(%ifils, :$ifil, :$verbose, :$debug) is export {
     if $ifil {
         # get the files out of the input file
         for $ifil.IO.lines -> $line {
@@ -24,13 +23,14 @@ sub Lint(%ifils, :$ifil, :$debug, :$verbose) is export {
     }
 
     for %ifils.keys -> $f {
-	say "DEBUG:  Linting file '$f'..." if $debug;
+	say "== Linting file '$f'...";
+	say "== Linting file '$f'..." if $verbose;
 	for $f.IO.lines.kv -> $linenum is copy, $line is copy {
 	    ++$linenum;
             when $line ~~ /:i ^ \s* '=' (begin|end) \s+ (<alpha><alnum>+) / {
 		my $typ = ~$0;
 		my $nam = ~$1;
-		if $debug {
+		if $verbose {
 		    say "line $linenum: =$typ $nam";
 		    say "  a 'begin' type" if $typ ~~ /begin/;
 		    say "  an 'end' type" if $typ ~~ /end/;
@@ -60,7 +60,7 @@ sub Lint(%ifils, :$ifil, :$debug, :$verbose) is export {
 
             when $line ~~ /:i (<<open>> | ':err' | ':out' ) / {
 		my $typ = ~$0;
-		if $debug {
+		if $verbose {
 		    say "line $linenum: $typ";
 		    say "  an 'open' type";
 		}
@@ -70,7 +70,7 @@ sub Lint(%ifils, :$ifil, :$debug, :$verbose) is export {
 
             when $line ~~ /:i (<<close>> | ':close' ) / {
 		my $typ = ~$0;
-		if $debug {
+		if $verbose {
 		    say "line $linenum: $typ";
 		    say "  a 'close' type";
 		}
@@ -89,7 +89,7 @@ sub Lint(%ifils, :$ifil, :$debug, :$verbose) is export {
 	my $v = %end{$k};
 	say "  end $k: $v";
     }
-    say qq:to/HERE/;
+    print qq:to/HERE/;
     open:  $nopen
     close: $nclose
     HERE

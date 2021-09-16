@@ -1,25 +1,30 @@
 {
-    "perl"        : "6.c",
-    "name"        : "Perl6::Lint",
-    "version"     : "0.1.0",
-    "description" : "Provides Lint checks for Perl 6 programs.",
-    "authors"     : [ "github:tbrowder" ],
-    "license"     : "Artistic-2.0",
-    "source-url"  : "https://github.com/tbrowder/Perl6-Lint.git",
-    "support"     : {
-        "bugtracker" : "https://github.com/tbrowder/Perl6-Lint/issues"
-    },
-    "provides"    : {
-        "Perl6::Lint" : "lib/Perl6/Lint.pm6"
-    },
-    "test-depends"     : [
-	"Test::META"
-    ],
-    "depends" : [
-    ],
-    "resources" : [
-    ],
-    "tags" : [
-	"Lint"
-    ]
+  "authors": [
+    "CPAN:tbrowder"
+  ],
+  "build-depends": [
+  ],
+  "depends": [
+  ],
+  "description": "Provides Lint checks for Perl 6 programs.",
+  "license": "Artistic-2.0",
+  "name": "Raku::Lint",
+  "perl": "6.c",
+  "provides": {
+    "Raku::Lint": "lib/Raku/Lint.rakumod"
+  },
+  "resources": [
+  ],
+  "source-url": "https://github.com/tbrowder/Perl6-Lint.git",
+  "support": {
+    "bugtracker": "https://github.com/tbrowder/Perl6-Lint/issues"
+  },
+  "tags": [
+    "Lint"
+  ],
+  "test-depends": [
+    "Proc::Easy",
+    "Test::META"
+  ],
+  "version": "0.1.0"
 }
