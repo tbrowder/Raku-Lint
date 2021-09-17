@@ -6,10 +6,7 @@ if !@*ARGS {
     say qq:to/HERE/;
     Usage: {$*PROGRAM.basename} [options...] <files to check...>
 
-    Checks files for errors:
-
-      matching =begin/=end blocks
-      file opens without a close
+    Checks files for some syntax and other errors.
 
     Options:
 

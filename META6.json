@@ -23,6 +23,7 @@
     "Lint"
   ],
   "test-depends": [
+    "File::Temp",
     "Test::META"
   ],
   "version": "0.1.0"
