@@ -37,7 +37,7 @@ or
 DESCRIPTION
 ===========
 
-This module is a simple checker of Raku source code to detect common coding errors (file scopenonly at present). Its advantage over the compiler is that it checks every line rather than bailing out after finding the first error. It can be very useful innporting Perl code to Raku, and it may eventually be using some code from **Larry Wall**'s and **Bruce Gray**'s old conversion programs.
+This module is a simple checker of Raku source code to detect common coding errors (file scope only at present). Its advantage over the compiler is that it checks every line rather than bailing out after finding the first error. It can be very useful innporting Perl code to Raku, and it may eventually be using some code from **Larry Wall**'s and **Bruce Gray**'s old conversion programs.
 
 The module includes the executable Raku program `raku-lint`. Its use is shown by executing it with no arguments, e.g.,
 
