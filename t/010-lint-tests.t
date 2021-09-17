@@ -12,6 +12,6 @@ my @opts = [
 
 for @opts -> $o {
     lives-ok { 
-        shell "raku -Ilib ./bin/raku-lint $o ./t/data/raku-lint-test-script.raku > /dev/null"; 
+        shell "raku -Ilib ./bin/raku-lint $o ./t/data/f0.raku > /dev/null"; 
     }, "test option(s): '$o'"
 }

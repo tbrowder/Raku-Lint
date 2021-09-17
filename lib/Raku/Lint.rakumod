@@ -26,6 +26,9 @@ sub lint(:%ifils!, :$ifil, :$verbose, :$debug --> Str) is export {
     }
 
     for %ifils.keys -> $f {
+        unless $f.IO.f {
+            die "FATAL: \%ifils.keys->\$f '$f' is NOT a file";
+        }
 	$s ~= "== Linting file '$f'...\n" if $verbose;
 	for $f.IO.lines.kv -> $linenum is copy, $line is copy {
 	    ++$linenum;

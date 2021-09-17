@@ -50,7 +50,7 @@ for @*ARGS -> $arg {
     %ifils{$arg} = 1;
 }
 
-my $tifil = 't/data/raku-lint-test-script.raku';
+my $tifil = 't/data/f0.raku';
 if $debug {
     %ifils{$tifil}++;
 }

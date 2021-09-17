@@ -30,8 +30,8 @@ DESCRIPTION
 The module includes the executable Raku program `raku-lint`. Its use is shown by executing it with no arguments, e.g.,
 
 ```raku
-./raku-lint
-Usage: raku-lint [options...] <files to check...>
+$ ./raku-lint
+Usage: raku-lint [options...] <one or more files to check...>
 
 Checks files for errors:
 
@@ -42,7 +42,7 @@ Options:
 
   --file=X   Files listed in file X are added to the list of files
                to check.
-  --verbose  Reports errors in detail to stdout.
+  --verbose  Reports more details to stdout.
 ```
 
 AUTHOR
