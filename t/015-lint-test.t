@@ -1,8 +1,9 @@
 use Test;
 
 use Raku::Lint;
+use File::Temp;
 
-plan 2;
+plan 3;
 
 my $default-out = q:to/HERE/;
   begin comment: 4
@@ -63,11 +64,10 @@ open:  8
 close: 2
 HERE
 
-# need some small test files to test output with
-
-my %h = set <
-    ./t/data/f0.raku
->;
+my $fil = "./t/data/f0.raku";
+my %h = set [
+    $fil,
+];
 my $ostr;
 my %ifils;
 
@@ -79,3 +79,10 @@ is $ostr, $default-out, "default output";
 %ifils = %h;
 $ostr = lint :%ifils, :verbose(1);
 is $ostr, $verbose-out, "verbose output";
+
+my ($f, $fh) = tempfile;
+$fh.say: $fil;
+$fh.close;
+%ifils = [];
+$ostr = lint :%ifils, :ifil($f), :verbose(1);
+is $ostr, $verbose-out, "verbose output with :\$ifil";
