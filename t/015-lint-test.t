@@ -65,24 +65,19 @@ close: 2
 HERE
 
 my $fil = "./t/data/f0.raku";
-my %h = set [
+my @ifils = [
     $fil,
 ];
 my $ostr;
-my %ifils;
 
-%ifils = %h;
-$ostr = lint :%ifils;
+$ostr = lint @ifils;
 is $ostr, $default-out, "default output";
 
-
-%ifils = %h;
-$ostr = lint :%ifils, :verbose(1);
+$ostr = lint @ifils, :verbose(1);
 is $ostr, $verbose-out, "verbose output";
 
 my ($f, $fh) = tempfile;
 $fh.say: $fil;
 $fh.close;
-%ifils = [];
-$ostr = lint :%ifils, :ifil($f), :verbose(1);
+$ostr = lint @ifils, :ifil($f), :verbose(1);
 is $ostr, $verbose-out, "verbose output with :\$ifil";

@@ -13,11 +13,11 @@ my %h = set <
 my $fil-args = %h.keys.join(" ");
 
 my $ostr;
-my %ifils;
+my @ifils;
 
-%ifils = %h;
+@ifils = %h.keys;
 lives-ok {
-    $ostr = lint :%ifils;
+    $ostr = lint @ifils;
 }, "handle multiple files";
 
 lives-ok {

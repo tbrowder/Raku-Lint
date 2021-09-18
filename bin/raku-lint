@@ -44,15 +44,16 @@ for @*ARGS -> $arg {
         say "FATAL: Arg '$arg' is not a file.";
         exit;
     }
-    %ifils{$arg} = 1;
+    %ifils{$arg.IO.absolute} = 1;
 }
 
 my $tifil = 't/data/f0.raku';
 if $debug {
-    %ifils{$tifil}++;
+    %ifils{$tifil.IO.absolute}++;
 }
 
 die "FATAL: No files entered.\n" if !%ifils && !$ifil;
 
-my $ostr = lint(:%ifils, :$ifil, :$verbose, :$debug);
+my @ifils = %ifils.keys;
+my $ostr = lint(@ifils, :$ifil, :$verbose, :$debug);
 say $ostr;

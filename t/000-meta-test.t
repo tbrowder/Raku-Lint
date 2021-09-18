@@ -10,7 +10,6 @@ if AUTHOR {
     done-testing;
 }
 else {
-    #skip-rest "Skipping author test";
     say "Skipping author test";
     done-testing;
     exit;

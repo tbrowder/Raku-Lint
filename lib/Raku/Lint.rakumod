@@ -6,8 +6,12 @@ unit module Raku::Lint;
 #      begin, end, open, close
 # analysis is done after parsing (????)
 
-sub lint(:%ifils!, :$ifil, :$verbose, :$debug --> Str) is export {
+sub lint(@ifils, :$ifil, :$verbose, :$debug --> Str) is export {
     # local vars
+    my %ifils;
+    if @ifils.elems {
+        for @ifils { %ifils{$_} = 1 };
+    }
     my %h;
     my $nopen  = 0; # number of types: open
     my $nclose = 0; # number of types: close
