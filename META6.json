@@ -17,9 +17,9 @@
   },
   "resources": [
   ],
-  "source-url": "https://github.com/tbrowder/Perl6-Lint.git",
+  "source-url": "https://github.com/tbrowder/Raku-Lint.git",
   "support": {
-    "bugtracker": "https://github.com/tbrowder/Perl6-Lint/issues"
+    "bugtracker": "https://github.com/tbrowder/Raku-Lint/issues"
   },
   "tags": [
     "Lint"
