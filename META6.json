@@ -5,6 +5,8 @@
   "build-depends": [
   ],
   "depends": [
+    "Text::Utils",
+    "File::Find"
   ],
   "description": "Provides Lint checks for Perl 6 programs.",
   "license": "Artistic-2.0",

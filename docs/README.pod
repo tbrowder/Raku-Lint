@@ -27,20 +27,13 @@ of Perl code to Raku such as:
     raku-lint [options...] <file names...>
 =end code
 
-or
-
-=begin code :lang<raku>
-    raku-lint [options...] --files=<file with list of files to check>
-=end code
-
 =head1 DESCRIPTION
 
 This module is a simple checker of Raku source code to detect common
 coding errors (file scope only at present). Its advantage over the compiler is that it checks every
 line rather than bailing out after finding the first error. 
-It can be very useful in porting Perl code to Raku, and it may eventually be using
+It can be very useful in porting Perl code to Raku, and it may eventually use
 some code from B<Larry Wall>'s and B<Bruce Gray>'s old conversion programs.
-
 
 The module includes the executable Raku program C<raku-lint>.  Its
 use is shown by executing it with no arguments, e.g.,

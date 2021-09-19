@@ -55,5 +55,5 @@ if $debug {
 die "FATAL: No files entered.\n" if !%ifils && !$ifil;
 
 my @ifils = %ifils.keys;
-my $ostr = lint(@ifils, :$ifil, :$verbose, :$debug);
-say $ostr;
+my @linters = lint(@ifils, :$ifil, :$verbose, :$debug);
+#say $ostr;

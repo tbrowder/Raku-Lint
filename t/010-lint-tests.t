@@ -4,6 +4,7 @@ use Raku::Lint;
 
 plan 9;
 
+# Test all options are functional
 my @opts = [
     "", 
     "-v", "--v", "-verbose", "--verbose", 

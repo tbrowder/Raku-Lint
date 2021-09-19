@@ -1,24 +1,86 @@
 unit module Raku::Lint;
 
-# a hash to keep info, key on line number
-#  line number => type = 'value' # where value is name, or indentation, or '' if nothing of note
-#    type is almost generic, list so far
-#      begin, end, open, close
-# analysis is done after parsing (????)
+class LType is export {
+    has $.type is rw = '';
+    # pod begin/end
+    has $.label is rw = '';
+    has $.indent is rw = 0;
+}
 
-sub lint(@ifils, :$ifil, :$verbose, :$debug --> Str) is export {
+class LLine is export {
+    has $.linenum;
+    has $.line;
+    has LType @.types;
+}
+
+# A class to keep track of problems in a single
+# file
+class Linter is export {
+    has $.fname    is rw;
+
+    =begin comment
+    my $nopen  = 0; # number of types: open
+    my $nclose = 0; # number of types: close
+    my %begin;      # number of types: begin
+    my %end;        # number of types: end
+    =end comment
+
+    has %.types is rw; # count by types
+
+    # prob format example:
+    #   %.probs{$line-num} = [];
+    #      = "problem...
+    has LLine %.lines    is rw; # key: line number, indexed from 1
+
+    method record-pod-type($LT) {
+        my ($t, $l) = $LT.type, $LT.label;
+        if %!types{$t}{$l}:exists {
+            ++%!types{$t}{$l}
+        }
+        else {
+            %!types{$t}{$l} = 1;
+        }
+    }
+
+    method record-io-type($type) {
+    }
+}
+
+sub find-raku-files($dir) {
+    use File::Find;
+
+} # sub find-raku-files
+
+sub set-get-LLine($LL where LLine|Int, :$linenum!, :$line!, Linter:D :$linter!) {
+    my $ll = $LL;
+    if not $ll {
+        $ll = LLine.new: :$linenum, :$line;
+        $linter.lines{$linenum} = $ll;
+    }
+    $ll
+}
+
+sub lint(@ifils, :$ifil, :$idir, :$verbose, :$debug --> List) is export {
+    use Text::Utils :strip-comment;
+
     # local vars
     my %ifils;
     if @ifils.elems {
         for @ifils { %ifils{$_} = 1 };
     }
+
+    # a hash to keep info, key on line number
+    #  line number => type = 'value' # where value is name, or indentation, or '' if nothing of note
+    #    type is almost generic, list so far
+    #      begin, end, open, close
+    # analysis is done after parsing (????)
     my %h;
     my $nopen  = 0; # number of types: open
     my $nclose = 0; # number of types: close
     my %begin;      # number of types: begin
     my %end;        # number of types: end
 
-    my Str $s = '';
+    my $s = '';
     if $ifil and $ifil.IO.r {
         # get the files out of the input file
         for $ifil.IO.lines -> $line {
@@ -29,79 +91,127 @@ sub lint(@ifils, :$ifil, :$verbose, :$debug --> Str) is export {
         }
     }
 
+    if $idir and $idir.IO.d {
+        # get the files out of the input dir
+        my @fils = find-raku-files $idir;
+        for @fils -> $fil {
+            next if !$fil.IO.f;
+            %ifils{$fil}++;
+        }
+    }
+
+    my @linters; # one Linter object per file
     for %ifils.keys -> $f {
         unless $f.IO.f {
             die "FATAL: \%ifils.keys->\$f '$f' is NOT a file";
         }
-	$s ~= "== Linting file '$f'...\n" if $verbose;
-	for $f.IO.lines.kv -> $linenum is copy, $line is copy {
-	    ++$linenum;
-            when $line ~~ /:i ^ \s* '=' (begin|end) \s+ (<alpha><alnum>+) / {
-		my $typ = ~$0;
-		my $nam = ~$1;
-		if $verbose {
-		    $s ~= "line $linenum: =$typ $nam\n";
-		    $s ~= "  a 'begin' type\n" if $typ ~~ /begin/;
-		    $s ~= "  an 'end' type\n" if $typ ~~ /end/;
-		}
+
+        my $L = Linter.new: :fname($f);
+        @linters.push: $L;
+
+	$s ~= "== Linting file '$f'...\n" if 1 or $verbose;
+        my @lines = $f.IO.lines;
+        @lines.unshift: "\n"; # create a one-index file
+	LINE: for @lines.kv -> $linenum, $line is copy {
+            # ignore normal comments?
+            # yes, for now
+            $line = strip-comment $line;
+            # skip blank lines
+            next LINE if $line ~~ /\S/;
+
+            # We only have LLine objects for lines that are triggered
+            # by some policy problem.
+            my $LL = 0; # LLine.new: :$linenum, :$line;
+
+            if $line ~~ /:i ^ \s* '=' (begin|end) \s+ (<alpha><alnum>+) / {
+		my $type  = ~$0;
+		my $label = ~$1;
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                my $LT = LType.new: :$type;
+                $LL.types.push($LT);
 		# a 'begin' or 'end' type
+                $LT.label = $label;
 		# get the indentation amount
-		my $indent = index $line, '=';
-		%h{$linenum}<type>{$typ}<indent> = $indent;
-		%h{$linenum}<type>{$typ}<name>   = $nam;
-		if $typ ~~ /begin/ {
-                    if %begin{$nam}:exists {
-			++%begin{$nam};
-                    }
-                    else {
-			%begin{$nam} = 1;
-                    }
-		}
-		elsif $typ ~~ /end/ {
-                    if %end{$nam}:exists {
-			++%end{$nam};
-                    }
-                    else {
-			%end{$nam} = 1;
-                    }
-		}
+		$LT.indent = index $line, '=';
+
+                $L.record-pod-type: $LT;
+                # should only be one per line
+                next LINE;
             }
 
-            when $line ~~ /:i (<<open>> | ':err' | ':out' ) / {
-		my $typ = ~$0;
-		if $verbose {
-		    $s ~= "line $linenum: $typ\n";
-		    $s ~= "  an 'open' type\n";
-		}
-		# an 'open' type
-		++$nopen;
+            if $line ~~ / <<open>> / {
+		my $type = 'open';
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                my $LT = LType.new: :$type;
+                $LL.types.push($LT);
+                $L.record-io-type: $LT;
             }
 
-            when $line ~~ /:i (<<close>> | ':close' ) / {
-		my $typ = ~$0;
-		if $verbose {
-		    $s ~= "line $linenum: $typ\n";
-		    $s ~= "  a 'close' type\n";
-		}
-		# a 'close' type
-		++$nclose;
+            if $line ~~ / ':err' / {
+		my $type = 'open';
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                my $LT = LType.new: :$type;
+                $LL.types.push($LT);
+                $L.record-io-type: $LT;
             }
+
+            if $line ~~ / ':out' / {
+		my $type = 'open';
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                my $LT = LType.new: :$type;
+                $LL.types.push($LT);
+                $L.record-io-type: $LT;
+            }
+
+            if $line ~~ / <<close>> / {
+		my $type = 'close';
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                my $LT = LType.new: :$type;
+                $LL.types.push($LT);
+                $L.record-io-type: $LT;
+            }
+
+            if $line ~~ / ':close' / {
+		my $type = 'close';
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                my $LT = LType.new: :$type;
+                $LL.types.push($LT);
+                $L.record-io-type: $LT;
+            }
+
+            if $line ~~ /  (foreach) / {
+		my $type = ~$0;
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                my $LT = LType.new: :$type;
+                $LL.types.push($LT);
+            }
+
+            if $line ~~ /  '=' \h* '<<' / {
+		my $type = "Perl-heredoc";
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                my $LT = LType.new: :$type;
+                $LL.types.push($LT);
+            }
+
+            if $line ~~ / ['q:to'|'qq:to'] '/' (<alpha><alnum>+) '/'  / {
+		my $type = "Raku-heredoc";
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+                my $label = ~$0;
+
+                # TODO read lines until finding matching label
+            }
+            
 	}
     }
 
-    for %begin.keys.sort -> $k {
-	my $v = %begin{$k};
-	$s ~= "  begin $k: $v\n";
-    }
-    for %end.keys.sort -> $k {
-	my $v = %end{$k};
-	$s ~= "  end $k: $v\n";
-    }
-
-    $s ~= qq:to/HERE/;
-    open:  $nopen
-    close: $nclose
-    HERE
-
-    $s
+    @linters;
+    
 } # sub lint
