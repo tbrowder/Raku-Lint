@@ -41,3 +41,31 @@ my $p5 = Proc.new: :out, :err;
 $p.out.close;
 
 $p5.out.spurt(:close);
+
+my $s=<<"HERE";
+fg
+HERE
+
+my $r = qq:heredoc/HERE/;
+hfc
+ HERE
+
+my $t = qq:to/HERE/;
+gufsd
+ HERE  
+
+my $u = qq:to/HERE2/;
+gufsd
+ HERE2 
+
+my $w = g:to/HERE3/;
+d
+n ng bg
+  HERE3
+
+my $u = qq:to/HERE/;
+gufsd
+ HERE  
+
+
+
