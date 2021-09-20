@@ -11,6 +11,10 @@ class LLine is export {
     has $.linenum;
     has $.line;
     has LType @.types;
+
+    method show {
+        $*OUT.say: "  line $!linenum: |$!line|";
+    }
 }
 
 # A class to keep track of problems in a single
@@ -53,7 +57,11 @@ class Linter is export {
     }
 
     method show {
-	$*OUT.say: "== Linting file '$!fname'..."
+	$*OUT.say: "== Linting file '$!fname'...";
+        my @n = %!lines.keys.sort({$^a <=> $^b});
+        for @n -> $n {
+            %!lines{$n}.show; 
+        }
     }
 
 }
@@ -122,7 +130,7 @@ sub lint(
     }
 
     my @linters; # one Linter object per file
-    for %ifils.keys -> $fname {
+    for %ifils.keys.sort -> $fname {
         unless $fname.IO.f {
             die "FATAL: \%ifils.keys->\$fname '$fname' is NOT a file";
         }
@@ -247,7 +255,7 @@ sub lint(
                 $LL.types.push($LT);
             }
 
-            if $line ~~ / ['q:to'|'qq:to'] '/' (<alpha><alnum>+) '/'  / {
+            if $line ~~ / [q|qq] ':' [to|heredoc] '/' (<alpha><alnum>+) '/'  / {
 		my $type = "Raku-heredoc";
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
                 $heredoc-label = ~$0;
