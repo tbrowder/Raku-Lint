@@ -1,4 +1,6 @@
-#!/usr/bin/env raku 
+#!/usr/bin/env raku
+
+use lib <../lib>;
 use Raku::Lint;
 
 if !@*ARGS {
