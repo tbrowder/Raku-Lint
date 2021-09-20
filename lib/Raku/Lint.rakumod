@@ -42,13 +42,25 @@ class Linter is export {
         }
     }
 
-    method record-io-type($type) {
+    method record-io-type($LT) {
+        my $t = $LT.type;
+        if %!types<io>{$t}:exists {
+            ++%!types<io>{$t}
+        }
+        else {
+            %!types<io>{$t} = 1;
+        }
     }
+
+    method show {
+	$*OUT.say: "== Linting file '$!fname'..."
+    }
+
 }
 
 sub find-raku-files($dir) {
     use File::Find;
-
+    find :$dir, :name(/'.' [p6|pl6|pm6|raku|rakumod] $/);
 } # sub find-raku-files
 
 sub set-get-LLine($LL where LLine|Int, :$linenum!, :$line!, Linter:D :$linter!) {
@@ -60,7 +72,16 @@ sub set-get-LLine($LL where LLine|Int, :$linenum!, :$line!, Linter:D :$linter!) 
     $ll
 }
 
-sub lint(@ifils, :$ifil, :$idir, :$verbose, :$debug --> List) is export {
+sub lint(
+    @ifils, 
+    :$ifil, 
+    :$idir, 
+    :$strip = 0, 
+    :$last = 0, 
+    :$verbose, 
+    :$debug 
+    --> List
+) is export {
     use Text::Utils :strip-comment;
 
     # local vars
@@ -101,29 +122,48 @@ sub lint(@ifils, :$ifil, :$idir, :$verbose, :$debug --> List) is export {
     }
 
     my @linters; # one Linter object per file
-    for %ifils.keys -> $f {
-        unless $f.IO.f {
-            die "FATAL: \%ifils.keys->\$f '$f' is NOT a file";
+    for %ifils.keys -> $fname {
+        unless $fname.IO.f {
+            die "FATAL: \%ifils.keys->\$fname '$fname' is NOT a file";
         }
 
-        my $L = Linter.new: :fname($f);
+        my $L = Linter.new: :$fname;
         @linters.push: $L;
 
-	$s ~= "== Linting file '$f'...\n" if 1 or $verbose;
-        my @lines = $f.IO.lines;
-        @lines.unshift: "\n"; # create a one-index file
-	LINE: for @lines.kv -> $linenum, $line is copy {
+        my $in-heredoc;
+        my $heredoc-label;
+	LINE: for $fname.IO.lines.kv -> $linenum is copy, $line is copy {
+            ++$linenum; # make line numbers indexed from one
             # ignore normal comments?
-            # yes, for now
-            $line = strip-comment $line;
+            if $strip and $last {
+                $line = strip-comment $line, :$last;
+            }
+            elsif $strip {
+                $line = strip-comment $line;
+            }
+
             # skip blank lines
-            next LINE if $line ~~ /\S/;
+            next LINE if $line !~~ /\S/;
 
             # We only have LLine objects for lines that are triggered
             # by some policy problem.
             my $LL = 0; # LLine.new: :$linenum, :$line;
 
-            if $line ~~ /:i ^ \s* '=' (begin|end) \s+ (<alpha><alnum>+) / {
+            if $in-heredoc {
+                # the only word on the line should be the ending label
+                next LINE if $line !~~ /$heredoc-label/;
+
+                $in-heredoc = 0;
+		my $type  = "End-heredoc";
+               
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+                my $LT = LType.new: :$type, :label($heredoc-label);
+                $LL.types.push($LT);
+                
+                next LINE;
+            }
+
+            if $line ~~ /^ \s* '=' (begin|end) \s+ (<alpha><alnum>+) / {
 		my $type  = ~$0;
 		my $label = ~$1;
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
@@ -156,6 +196,9 @@ sub lint(@ifils, :$ifil, :$idir, :$verbose, :$debug --> List) is export {
                 my $LT = LType.new: :$type;
                 $LL.types.push($LT);
                 $L.record-io-type: $LT;
+
+                # possible other open type on the same line
+                $line = $/.prematch ~ " " ~ $/.postmatch;
             }
 
             if $line ~~ / ':out' / {
@@ -165,6 +208,9 @@ sub lint(@ifils, :$ifil, :$idir, :$verbose, :$debug --> List) is export {
                 my $LT = LType.new: :$type;
                 $LL.types.push($LT);
                 $L.record-io-type: $LT;
+
+                # possible other open type on the same line
+                $line = $/.prematch ~ " " ~ $/.postmatch;
             }
 
             if $line ~~ / <<close>> / {
@@ -204,9 +250,15 @@ sub lint(@ifils, :$ifil, :$idir, :$verbose, :$debug --> List) is export {
             if $line ~~ / ['q:to'|'qq:to'] '/' (<alpha><alnum>+) '/'  / {
 		my $type = "Raku-heredoc";
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-                my $label = ~$0;
+                $heredoc-label = ~$0;
+                $in-heredoc    = 1;
 
-                # TODO read lines until finding matching label
+                my $LT = LType.new: :$type, :label($heredoc-label);
+                $LL.types.push($LT);
+
+                # read lines until finding matching label
+                # handled above
+                next LINE;
             }
             
 	}
