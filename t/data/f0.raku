@@ -42,6 +42,8 @@ $p.out.close;
 
 $p5.out.spurt(:close);
 
+foreach 
+
 my $s=<<"HERE";
 fg
 HERE
@@ -63,6 +65,7 @@ d
 n ng bg
   HERE3
 
+# unclosed heredoc:
 my $u = qq:to/HERE/;
 gufsd
  HERE  
