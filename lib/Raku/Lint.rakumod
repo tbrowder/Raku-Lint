@@ -116,7 +116,6 @@ sub lint(
     my %begin;      # number of types: begin
     my %end;        # number of types: end
 
-    my $s = '';
     if $ifil and $ifil.IO.r {
         # get the files out of the input file
         for $ifil.IO.lines -> $line {
@@ -178,107 +177,141 @@ sub lint(
                 next LINE;
             }
 
-            if $line ~~ /^ \s* '=' (begin|end) \s+ (<alpha><alnum>+) / {
-		my $type  = ~$0;
-		my $label = ~$1;
-                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+            # This loop allows visiting the line multiple times
+            # to pick out interesting pieces by pasting prematch
+            # and postmatch parts into a new line.
+            loop {
+                my $x = 0;
 
-                my $LT = LType.new: :$type;
-                $LL.types.push($LT);
-		# a 'begin' or 'end' type
-                $LT.label = $label;
-		# get the indentation amount
-		$LT.indent = index $line, '=';
+                if $line ~~ /^ \s* '=' (begin|end) \s+ (<alpha><alnum>+) / {
+	       	    my $type  = ~$0;
+		    my $label = ~$1;
+                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
 
-                $L.record-pod-type: $LT;
-                # should only be one per line
-                next LINE;
+                    my $LT = LType.new: :$type;
+                    $LL.types.push($LT);
+                    $LT.label = $label;
+		    # get the indentation amount
+		    $LT.indent = index $line, '=';
+
+                    $L.record-pod-type: $LT;
+                    # should only be one per line
+
+                    $line = paste $/;
+                    ++$x;
+                }
+
+                if $line ~~ / <<open>> / {
+		    my $type = 'open';
+                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                    my $LT = LType.new: :$type;
+                    $LL.types.push($LT);
+                    $L.record-io-type: $LT;
+
+                    $line = paste $/;
+                    ++$x;
+                }
+
+                if $line ~~ / ':err' / {
+		    my $type = 'open';
+                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                    my $LT = LType.new: :$type;
+                    $LL.types.push($LT);
+                    $L.record-io-type: $LT;
+
+                    # possible other open type on the same line
+                    $line = paste $/;
+                    ++$x;
+                }
+
+                if $line ~~ / ':out' / {
+		    my $type = 'open';
+                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                    my $LT = LType.new: :$type;
+                    $LL.types.push($LT);
+                    $L.record-io-type: $LT;
+
+                    # possible other open type on the same line
+                    $line = paste $/;
+                    ++$x;
+                }
+
+                if $line ~~ / <<close>> / {
+		    my $type = 'close';
+                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                    my $LT = LType.new: :$type;
+                    $LL.types.push($LT);
+                    $L.record-io-type: $LT;
+
+                    $line = paste $/;
+                    ++$x;
+                }
+
+                if $line ~~ / ':close' / {
+		    my $type = 'close';
+                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+                    my $LT = LType.new: :$type;
+                    $LL.types.push($LT);
+                    $L.record-io-type: $LT;
+
+                    $line = paste $/;
+                    ++$x;
+                }
+
+                if $line ~~ / (foreach) / {
+		    my $type = ~$0;
+                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+                    my $LT = LType.new: :$type;
+                    $LL.types.push($LT);
+                    $line = paste $/;
+                    ++$x;
+                }
+
+                if $line ~~ / '=' \h* '<<' <['"]> (<alpha><alnum>+) <['"]> / {
+		    my $type = "Perl-heredoc";
+                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+                    $heredoc-label = ~$0;
+                    $in-heredoc    = 1;
+
+                    my $LT = LType.new: :$type;
+                    $LL.types.push($LT);
+
+                    $line = paste $/;
+                    ++$x;
+                }
+
+                if $line ~~ / [q|qq] ':' [to|heredoc] '/' (<alpha><alnum>+) '/'  / {
+		    my $type = "Raku-heredoc";
+                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+                    $heredoc-label = ~$0;
+                    $in-heredoc    = 1;
+
+                    my $LT = LType.new: :$type, :label($heredoc-label);
+                    $LL.types.push($LT);
+
+                    # read lines until finding matching label
+                    # handled above
+
+                    $line = paste $/;
+                    ++$x;
+                    next LINE;
+                }
+
+                redo if $x > 0;
+                last;
             }
-
-            if $line ~~ / <<open>> / {
-		my $type = 'open';
-                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-
-                my $LT = LType.new: :$type;
-                $LL.types.push($LT);
-                $L.record-io-type: $LT;
-            }
-
-            if $line ~~ / ':err' / {
-		my $type = 'open';
-                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-
-                my $LT = LType.new: :$type;
-                $LL.types.push($LT);
-                $L.record-io-type: $LT;
-
-                # possible other open type on the same line
-                $line = $/.prematch ~ " " ~ $/.postmatch;
-            }
-
-            if $line ~~ / ':out' / {
-		my $type = 'open';
-                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-
-                my $LT = LType.new: :$type;
-                $LL.types.push($LT);
-                $L.record-io-type: $LT;
-
-                # possible other open type on the same line
-                $line = $/.prematch ~ " " ~ $/.postmatch;
-            }
-
-            if $line ~~ / <<close>> / {
-		my $type = 'close';
-                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-
-                my $LT = LType.new: :$type;
-                $LL.types.push($LT);
-                $L.record-io-type: $LT;
-            }
-
-            if $line ~~ / ':close' / {
-		my $type = 'close';
-                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-
-                my $LT = LType.new: :$type;
-                $LL.types.push($LT);
-                $L.record-io-type: $LT;
-            }
-
-            if $line ~~ /  (foreach) / {
-		my $type = ~$0;
-                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-
-                my $LT = LType.new: :$type;
-                $LL.types.push($LT);
-            }
-
-            if $line ~~ /  '=' \h* '<<' / {
-		my $type = "Perl-heredoc";
-                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-
-                my $LT = LType.new: :$type;
-                $LL.types.push($LT);
-            }
-
-            if $line ~~ / [q|qq] ':' [to|heredoc] '/' (<alpha><alnum>+) '/'  / {
-		my $type = "Raku-heredoc";
-                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-                $heredoc-label = ~$0;
-                $in-heredoc    = 1;
-
-                my $LT = LType.new: :$type, :label($heredoc-label);
-                $LL.types.push($LT);
-
-                # read lines until finding matching label
-                # handled above
-                next LINE;
-            }
-            
 	}
     }
 
     @linters;
     
 } # sub lint
+
+sub paste(Match $m) {
+    $m.prematch ~ " " ~ $m.postmatch
+}
