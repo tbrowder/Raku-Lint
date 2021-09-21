@@ -1,10 +1,16 @@
 unit module Raku::Lint;
 
 class LType is export {
-    has $.type is rw = '';
+    has $.type   is rw = '';
     # pod begin/end
-    has $.label is rw = '';
+    has $.label  is rw = '';
     has $.indent is rw = 0;
+    
+    method show {
+        $*OUT.say: "    type:    '$!type'";
+        $*OUT.say( "      label: '$!label'") if $!label;
+        $*OUT.say( "      indent: $!indent") if $!indent;
+    }
 }
 
 class LLine is export {
@@ -14,6 +20,7 @@ class LLine is export {
 
     method show {
         $*OUT.say: "  line $!linenum: |$!line|";
+        .show for @.types;
     }
 }
 
