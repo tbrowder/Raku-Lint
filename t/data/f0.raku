@@ -42,7 +42,7 @@ $p.out.close;
 
 $p5.out.spurt(:close);
 
-foreach 
+foreach
 
 # Perl heredoc
 my $s=<<"HERE";
@@ -51,25 +51,30 @@ HERE
 
 my $r = qq:heredoc/HERE/;
 hfc
+
  HERE
 
 my $t = qq:to/HERE/;
 gufsd
- HERE  
+
+
+HERE
 
 my $u = qq:to/HERE2/;
 gufsd
- HERE2 
+
+
+
+HERE2
 
 my $w = g:to/HERE3/;
 d
 n ng bg
+
+
+
   HERE3
 
 # unclosed heredoc:
 my $u = qq:to/HERE/;
 gufsd
- HERE  
-
-
-

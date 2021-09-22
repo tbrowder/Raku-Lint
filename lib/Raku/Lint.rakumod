@@ -6,12 +6,20 @@ class LType is export {
     has $.label  is rw = '';
     has $.indent is rw = 0;
     has $.linenum is required is rw = 0;
-    
-    method show(:$linenum) {
-        $*OUT.say: "    type:    '$!type'";
-        $*OUT.say: "      line:  $!linenum" if $linenum;
-        $*OUT.say( "      label: '$!label'") if $!label;
-        $*OUT.say( "      indent: $!indent") if $!indent;
+
+    method show(:$runaway) {
+        if $runaway {
+            # used for runaway heredocs
+            $*OUT.say: "    type:           '$!type'";
+            $*OUT.say: "    starting line:  $!linenum" if $!linenum;
+            $*OUT.say: "    label:          '$!label'"  if $!label;
+        }
+        else {
+            $*OUT.say: "    type:     '$!type'";
+            $*OUT.say: "      line:   $!linenum" if $!linenum;
+            $*OUT.say: "      label:  '$!label'"  if $!label;
+            $*OUT.say: "      indent: $!indent"  if $!indent;
+        }
     }
 }
 
@@ -68,12 +76,12 @@ class Linter is export {
         }
     }
 
-    method show(:$verbose = 0) {
+    method show(:$verbose = 0, :$debug) {
 	$*OUT.say: "== Linting file '$!fname'...";
         if $verbose {
             my @n = %!lines.keys.sort({$^a <=> $^b});
             for @n -> $n {
-                %!lines{$n}.show; 
+                %!lines{$n}.show;
             }
         }
 
@@ -84,13 +92,19 @@ class Linter is export {
 
         if @!misc-stack.elems {
 	    $*OUT.say: "  Miscellaneous problems:";
+            for @!misc-stack -> $LT {
+                $LT.show;
+            }
         }
         if @!pod-stack.elems {
 	    $*OUT.say: "  Pod label match problems:";
+            for @!pod-stack -> $LT {
+                $LT.show;
+            }
         }
         if $!open-heredoc {
 	    $*OUT.say: "  Runaway heredoc with no closing label:";
-            $!open-heredoc.show(:linenum);
+            $!open-heredoc.show(:runaway);
         }
     }
 
@@ -98,7 +112,7 @@ class Linter is export {
 
 sub find-raku-files($dir) {
     use File::Find;
-    find :$dir, :name(/'.' [p6|pl6|pm6|raku|rakumod] $/);
+    find :$dir, :name(/'.' [p6|pl6|pm6|raku|rakumod] $/), :type('file');;
 } # sub find-raku-files
 
 sub set-get-LLine($LL where LLine|Int, :$linenum!, :$line!, Linter:D :$linter!) {
@@ -111,13 +125,13 @@ sub set-get-LLine($LL where LLine|Int, :$linenum!, :$line!, Linter:D :$linter!) 
 }
 
 sub lint(
-    @ifils, 
-    :$ifil, 
-    :$idir, 
-    :$strip = 0, 
-    :$last = 0, 
-    :$verbose, 
-    :$debug 
+    @ifils,
+    :$ifil,
+    :$idir,
+    :$strip = 0,
+    :$last = 0,
+    :$verbose,
+    :$debug
     --> List
 ) is export {
     use Text::Utils :strip-comment;
@@ -187,17 +201,19 @@ sub lint(
             my $LL = 0; # LLine.new: :$linenum, :$line;
 
             if $in-heredoc {
+                note "DEBUG: \$in-heredoc is True on line $linenum" if $debug;
                 # the only word on the line should be the ending label
                 next LINE if $line !~~ /$heredoc-label/;
 
-                # we must have found the endin label, so...
+                # we must have found the ending label, so...
+                note "DEBUG: Line $linenum: found ending heredoc label '$heredoc-label' for heredoc type '{$L.open-heredoc.type}'" if $debug;
                 $in-heredoc = 0;
 		my $type  = "End-heredoc";
-               
+
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
                 my $LT = LType.new: :$type, :$linenum;
                 $LL.types.push($LT);
-                
+
                 # check the heredoc stack and remove the found match
                 # if all is well
                 die "FATAL: Unexpected empty \$open-heredoc" if not $L.open-heredoc;
@@ -210,6 +226,48 @@ sub lint(
 
                 next LINE;
             }
+
+            # check heredoc beginners
+            if $line ~~ / '=' \h* '<<' <['"]> (<alpha><alnum>+) <['"]> / {
+	        my $type = "Perl-heredoc";
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+                $heredoc-label = ~$0;
+                $in-heredoc    = 1;
+
+                my $LT = LType.new: :$type, :label($heredoc-label), :$linenum;
+                $LL.types.push($LT);
+
+                # reportable
+                $L.misc-stack.push($LT);
+
+                die "FATAL: Unexpected value for \$open-heredoc" if $L.open-heredoc;
+                $L.open-heredoc = $LT;
+
+                # read lines until finding matching label
+                # handled above
+
+                next LINE;
+            }
+
+            if $line ~~ / [q|qq] ':' [to|heredoc] '/' (<alpha><alnum>+) '/'  / {
+                my $type = "Raku-heredoc";
+                $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+                $heredoc-label = ~$0;
+                $in-heredoc    = 1;
+
+                my $LT = LType.new: :$type, :label($heredoc-label), :$linenum;
+                $LL.types.push($LT);
+
+                # reportable
+                die "FATAL: Unexpected value for \$open-heredoc" if $L.open-heredoc;
+                $L.open-heredoc = $LT;
+
+                # read lines until finding matching label
+                # handled above
+
+                next LINE;
+            }
+
 
             # This loop allows visiting the line multiple times
             # to pick out interesting pieces by pasting prematch
@@ -310,44 +368,6 @@ sub lint(
                     ++$x;
                 }
 
-                if $line ~~ / '=' \h* '<<' <['"]> (<alpha><alnum>+) <['"]> / {
-		    my $type = "Perl-heredoc";
-                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-                    $heredoc-label = ~$0;
-                    $in-heredoc    = 1;
-
-                    my $LT = LType.new: :$type, :label($heredoc-label), :$linenum;
-                    $LL.types.push($LT);
-
-                    # reportable
-                    $L.misc-stack.push($LT);
-                    die "FATAL: Unexpected value for \$open-heredoc" if $L.open-heredoc;
-                    $L.open-heredoc = $LT;
-
-                    $line = paste $/;
-                    ++$x;
-                }
-
-                if $line ~~ / [q|qq] ':' [to|heredoc] '/' (<alpha><alnum>+) '/'  / {
-		    my $type = "Raku-heredoc";
-                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-                    $heredoc-label = ~$0;
-                    $in-heredoc    = 1;
-
-                    my $LT = LType.new: :$type, :label($heredoc-label), :$linenum;
-                    $LL.types.push($LT);
-
-                    # reportable
-                    die "FATAL: Unexpected value for \$open-heredoc" if $L.open-heredoc;
-                    $L.open-heredoc = $LT;
-
-                    # read lines until finding matching label
-                    # handled above
-
-                    $line = paste $/;
-                    ++$x;
-                    next LINE;
-                }
 
                 redo if $x > 0;
                 last;
@@ -356,7 +376,7 @@ sub lint(
     }
 
     @linters;
-    
+
 } # sub lint
 
 sub paste(Match $m) {
