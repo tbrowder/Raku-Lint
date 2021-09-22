@@ -1,13 +1,15 @@
 unit module Raku::Lint;
 
 class LType is export {
-    has $.type   is rw = '';
+    has $.type is required  is rw = '';
     # pod begin/end
     has $.label  is rw = '';
     has $.indent is rw = 0;
+    has $.linenum is required is rw = 0;
     
-    method show {
+    method show(:$linenum) {
         $*OUT.say: "    type:    '$!type'";
+        $*OUT.say: "      line:  $!linenum" if $linenum;
         $*OUT.say( "      label: '$!label'") if $!label;
         $*OUT.say( "      indent: $!indent") if $!indent;
     }
@@ -36,7 +38,10 @@ class Linter is export {
     my %end;        # number of types: end
     =end comment
 
-    has %.types is rw; # count by types
+    has %.types         is rw; # count by types
+    has @.pod-stack     is rw; # track matching begin/end pairs
+    has $.open-heredoc  is rw; # track unclosed heredocs
+    has @.misc-stack    is rw; # foreach, etc.
 
     # prob format example:
     #   %.probs{$line-num} = [];
@@ -63,11 +68,29 @@ class Linter is export {
         }
     }
 
-    method show {
+    method show(:$verbose = 0) {
 	$*OUT.say: "== Linting file '$!fname'...";
-        my @n = %!lines.keys.sort({$^a <=> $^b});
-        for @n -> $n {
-            %!lines{$n}.show; 
+        if $verbose {
+            my @n = %!lines.keys.sort({$^a <=> $^b});
+            for @n -> $n {
+                %!lines{$n}.show; 
+            }
+        }
+
+        unless @!misc-stack.elems or @!pod-stack.elems or $!open-heredoc {
+	    $*OUT.say: "  No problems found.";
+            return;
+        }
+
+        if @!misc-stack.elems {
+	    $*OUT.say: "  Miscellaneous problems:";
+        }
+        if @!pod-stack.elems {
+	    $*OUT.say: "  Pod label match problems:";
+        }
+        if $!open-heredoc {
+	    $*OUT.say: "  Runaway heredoc with no closing label:";
+            $!open-heredoc.show(:linenum);
         }
     }
 
@@ -167,13 +190,24 @@ sub lint(
                 # the only word on the line should be the ending label
                 next LINE if $line !~~ /$heredoc-label/;
 
+                # we must have found the endin label, so...
                 $in-heredoc = 0;
 		my $type  = "End-heredoc";
                
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-                my $LT = LType.new: :$type, :label($heredoc-label);
+                my $LT = LType.new: :$type, :$linenum;
                 $LL.types.push($LT);
                 
+                # check the heredoc stack and remove the found match
+                # if all is well
+                die "FATAL: Unexpected empty \$open-heredoc" if not $L.open-heredoc;
+                my $opener = $L.open-heredoc;
+                my $err = 0;
+                ++$err if $opener.label ne $heredoc-label;
+                ++$err if $opener.type !~~ /heredoc/;
+                die "FATAL: Unexpected \$open-heredoc errors" if $err;
+                $L.open-heredoc = 0;
+
                 next LINE;
             }
 
@@ -188,7 +222,7 @@ sub lint(
 		    my $label = ~$1;
                     $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
 
-                    my $LT = LType.new: :$type;
+                    my $LT = LType.new: :$type, :$linenum;
                     $LL.types.push($LT);
                     $LT.label = $label;
 		    # get the indentation amount
@@ -205,7 +239,7 @@ sub lint(
 		    my $type = 'open';
                     $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
 
-                    my $LT = LType.new: :$type;
+                    my $LT = LType.new: :$type, :$linenum;
                     $LL.types.push($LT);
                     $L.record-io-type: $LT;
 
@@ -217,7 +251,7 @@ sub lint(
 		    my $type = 'open';
                     $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
 
-                    my $LT = LType.new: :$type;
+                    my $LT = LType.new: :$type, :$linenum;
                     $LL.types.push($LT);
                     $L.record-io-type: $LT;
 
@@ -230,7 +264,7 @@ sub lint(
 		    my $type = 'open';
                     $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
 
-                    my $LT = LType.new: :$type;
+                    my $LT = LType.new: :$type, :$linenum;
                     $LL.types.push($LT);
                     $L.record-io-type: $LT;
 
@@ -243,7 +277,7 @@ sub lint(
 		    my $type = 'close';
                     $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
 
-                    my $LT = LType.new: :$type;
+                    my $LT = LType.new: :$type, :$linenum;
                     $LL.types.push($LT);
                     $L.record-io-type: $LT;
 
@@ -255,7 +289,7 @@ sub lint(
 		    my $type = 'close';
                     $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
 
-                    my $LT = LType.new: :$type;
+                    my $LT = LType.new: :$type, :$linenum;
                     $LL.types.push($LT);
                     $L.record-io-type: $LT;
 
@@ -266,8 +300,12 @@ sub lint(
                 if $line ~~ / (foreach) / {
 		    my $type = ~$0;
                     $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-                    my $LT = LType.new: :$type;
+                    my $LT = LType.new: :$type, :$linenum;
                     $LL.types.push($LT);
+
+                    # reportable
+                    $L.misc-stack.push($LT);
+
                     $line = paste $/;
                     ++$x;
                 }
@@ -278,8 +316,13 @@ sub lint(
                     $heredoc-label = ~$0;
                     $in-heredoc    = 1;
 
-                    my $LT = LType.new: :$type;
+                    my $LT = LType.new: :$type, :label($heredoc-label), :$linenum;
                     $LL.types.push($LT);
+
+                    # reportable
+                    $L.misc-stack.push($LT);
+                    die "FATAL: Unexpected value for \$open-heredoc" if $L.open-heredoc;
+                    $L.open-heredoc = $LT;
 
                     $line = paste $/;
                     ++$x;
@@ -291,8 +334,12 @@ sub lint(
                     $heredoc-label = ~$0;
                     $in-heredoc    = 1;
 
-                    my $LT = LType.new: :$type, :label($heredoc-label);
+                    my $LT = LType.new: :$type, :label($heredoc-label), :$linenum;
                     $LL.types.push($LT);
+
+                    # reportable
+                    die "FATAL: Unexpected value for \$open-heredoc" if $L.open-heredoc;
+                    $L.open-heredoc = $LT;
 
                     # read lines until finding matching label
                     # handled above

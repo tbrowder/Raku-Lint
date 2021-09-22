@@ -74,4 +74,4 @@ die "FATAL: No files entered.\n" if !%ifils && !$ifil && !$idir;
 
 my @ifils = %ifils.keys;
 my @linters = lint(@ifils, :$ifil, :$idir, :$strip, :$last, :$verbose, :$debug);
-$_.show for @linters;
+$_.show(:$verbose) for @linters;

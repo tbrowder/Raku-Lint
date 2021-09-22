@@ -44,6 +44,7 @@ $p5.out.spurt(:close);
 
 foreach 
 
+# Perl heredoc
 my $s=<<"HERE";
 fg
 HERE
