@@ -14,12 +14,12 @@ for @lines -> $line {
 }
 
 
-sub indent($s) {
+sub indent($s --> List) {
     my $indent = '';
     if $s ~~ /^ (\h*) / {
         $indent = ~$0;
     }
     $indent, $indent.chars
-}
+} # sub indent
 
 
