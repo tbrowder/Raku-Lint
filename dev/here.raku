@@ -6,4 +6,12 @@ one two three
 
 say $line;
 
+my $line2 = q:to/HERE/;
+  one two three
+
+  four
+  HERE
+
+say $line2;
+
 
