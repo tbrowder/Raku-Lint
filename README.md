@@ -7,25 +7,11 @@ NAME
 
 **Raku::Lint**
 
-Checks for some mistakes in Raku files and modules. Currently checks for:
-
-  * matching pod `=begin/=end` statements
-
-  * matching file `open/close` statements
-
-  * matching heredoc labels
-
-It also detects some Perl constructs that are lurking during a port of Perl code to Raku such as:
-
-  * foreach
-
-  * heredocs using '<<'
-
 SYNOPSIS
 ========
 
 ```raku
-    raku-lint [options...] <file names...>
+$ ./raku-lint [options...] <file names...>
 ```
 
 DESCRIPTION
@@ -37,19 +23,42 @@ The module includes the executable Raku program `raku-lint`. Its use is shown by
 
 ```raku
 $ ./raku-lint
-Usage: raku-lint [options...] <one or more files to check...>
+Usage: lint.raku [options...] <files to check...>
 
-Checks files for errors:
-
-  matching =begin/=end blocks
-  file opens without a close
+Checks files for some syntax and other errors.
 
 Options:
 
-  --file=X   Files listed in file X are added to the list of files
-               to check.
-  --verbose  Reports more details to stdout.
+  --dir=X       Raku files listed in directory X are added to the
+                  list of files to check.
+  --file=X      Files listed in file X are added to the list of files
+                  to check.
+  --strip       Strips normal comments (at and following first '#'
+                  character on a line).
+  --strip-last  Strips normal comments (at and following last '#'
+                  character on a line).
+  --verbose     Reports findings in detail to stdout.
 ```
+
+Currently checks for:
+
+  * Matching pod `=begin/=end` statements (checks for same indentation)
+
+    Also reports runaway pod blocks (improperly closed blocks).
+
+  * Matching file `open/close` statements
+
+  * Matching heredoc terminators
+
+    Runaway heredocs (missing ending terminator)
+
+    Lines with less indentation than the terminator
+
+It also detects some Perl constructs that are lurking during a port of Perl code to Raku such as:
+
+  * foreach
+
+  * heredocs using '<<'
 
 AUTHOR
 ======
