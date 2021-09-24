@@ -17,7 +17,7 @@ $ ./raku-lint [options...] <file names...>
 DESCRIPTION
 ===========
 
-This module is a simple checker of Raku source code to detect common coding errors (file scope only at present). Its advantage over the compiler is that it checks every line rather than bailing out after finding the first error. It can be very useful in porting Perl code to Raku, and it may eventually use some code from **Larry Wall**'s and **Bruce Gray**'s old conversion programs as well as the late **@DrForr**'s **Perl6::Parser**.
+This module is a simple checker of Raku source code to detect common coding errors (file scope only at present). Its advantage over the compiler is that it checks every line rather than bailing out after finding the first error. It can be very useful in porting Perl code to Raku, and it may eventually use some code from **Larry Wall**'s and **Bruce Gray**'s old conversion programs as well as the late **Jeff Goff**'s **Perl6::Parser**.
 
 The module includes the executable Raku program `raku-lint`. Its use is shown by executing it with no arguments, e.g.,
 
