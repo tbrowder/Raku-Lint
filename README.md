@@ -3,9 +3,7 @@
 NAME
 ====
 
-**THIS IS A WORK IN PROGRESS**
-
-**Raku::Lint**
+**Raku::Lint** [**THIS IS A WORK IN PROGRESS**]
 
 SYNOPSIS
 ========
@@ -42,13 +40,17 @@ Options:
 
 Currently checks for:
 
-  * Matching pod `=begin/=end` statements (checks for same indentation)
+  * Pod blocks
 
-    Also reports runaway pod blocks (improperly closed blocks).
+    Matching pod `=begin/=end` statements (checks for same indentation)
+
+    Runaway pod blocks (improperly closed blocks).
 
   * Matching file `open/close` statements
 
-  * Matching heredoc terminators
+  * Heredocs
+
+    Matching terminators
 
     Runaway heredocs (missing ending terminator)
 
@@ -58,7 +60,7 @@ It also detects some Perl constructs that are lurking during a port of Perl code
 
   * foreach
 
-  * heredocs using '<<'
+  * heredocs using '=<<'
 
 AUTHOR
 ======
