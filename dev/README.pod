@@ -1,0 +1,8 @@
+Handling delimited pod blocks:
+
+Maintain a stack of open blocks.
+
+When finding a closed one, it should
+match the top opened one; otherwise
+its an error.
+
