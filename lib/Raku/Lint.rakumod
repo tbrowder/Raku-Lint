@@ -2,7 +2,7 @@ unit module Raku::Lint;
 
 # Some delimited pod blocks can be parents, and some not.
 
-my %types = set <pod heredoc perl-heredoc foreach>;
+my %types = set <pod heredoc perl-heredoc foreach open close>;
 class LType is export {
     has     $.type    is required; # one of: pod, heredoc, foreach, perl-heredoc
     has Int $.linenum is required;
@@ -284,7 +284,7 @@ sub lint(
             # we may be either in a heredoc OR a pod block
             if $in-heredoc {
                 note "DEBUG: \$in-heredoc is True on line $linenum" if $debug;
-                # the only word on the line should be the ending label, but we
+                # the only word on the line should be the ending label (terminator), but we
                 # need to save the line data and its identation for analyis
                 if $line !~~ /$heredoc-label/ {
                     my $indent = indent $line;
@@ -296,13 +296,13 @@ sub lint(
                 $heredoc-indent = indent $line;
                 if $debug {
                     note qq:to/HERE/;
-                    DEBUG: Line $linenum: found ending heredoc label '$heredoc-label'
+                    DEBUG: Line $linenum: found heredoc terminator '$heredoc-label'
                       for heredoc type '{$L.open-heredoc.type}', indent: $heredoc-indent.
                     HERE
                 }
 
                 $in-heredoc = 0;
-		my $type  = "End-heredoc";
+		my $type  = "heredoc";
 
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
                 my $LT = LType.new: :$type, :$linenum;
