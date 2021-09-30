@@ -1,14 +1,53 @@
 unit module Raku::Lint;
 
-# Some pod blocks can be parents, and some not.
+# Some delimited pod blocks can be parents, and some not.
 
+my %types = set <pod heredoc perl-heredoc foreach>;
 class LType is export {
-    has $.type is required    is rw = '';
-    # pod begin/end
-    has $.label               is rw = '';
-    has $.indent              is rw = 0;
-    has $.indent-str          is rw = '';
-    has $.linenum is required is rw = 0;
+    has     $.type    is required; # one of: pod, heredoc, foreach, perl-heredoc
+    has Int $.linenum is required;
+
+    has $.label;
+
+    # delimited pod block begin/end
+    has $.begin;
+    has $.end;
+    has $.is-parent;
+
+    has $.indent is rw = 0;
+    has $.indent-str;
+
+    submethod TWEAK {
+        unless %types{$!type}:exists {
+            die "FATAL: Unknown type '$!type'"
+        }
+        my $err = 0;
+        my $err-str = '';
+        # if pod
+        #   must have label (typename)
+        #   must have indent-str
+        #   must be begin or end
+        #   if begin must be a parent or not
+        if $!type eq 'pod' {
+
+            if $!begin.defined and $!end.defined {
+                die "FATAL: Both 'begin' AND 'end' are defined"
+            }
+            elsif $!begin.defined {
+                die "FATAL: A 'begin' must have 'is-parent' defined" if not $!is-parent.defined
+            }
+            elsif $!end.defined {
+                ; # ok for now
+            }
+        }
+
+        # if heredoc
+        #   must have label (terminator)
+        elsif $!type ~~ /heredoc/ {
+            ; # ok for now
+        }
+
+    }
 
     method show(:$runaway, :$pod) {
         if $runaway {
@@ -109,9 +148,9 @@ class Linter is export {
             }
         }
 
-        unless @!misc-stack.elems or 
-               @!pod-stack.elems or 
-               $!open-heredoc or 
+        unless @!misc-stack.elems or
+               @!pod-stack.elems or
+               $!open-heredoc or
                @!open-pod-block.elems {
 	    $*OUT.say: "  No problems found.";
             return;
@@ -213,7 +252,7 @@ sub lint(
         my $L = Linter.new: :$fname;
         @linters.push: $L;
 
-        # for heredocs (note the compiler warns of indentation 
+        # for heredocs (note the compiler warns of indentation
         # problems so we don't worry about it, at least not yet)
         my $in-heredoc;
         my $heredoc-label;  # terminator
@@ -257,7 +296,7 @@ sub lint(
                 $heredoc-indent = indent $line;
                 if $debug {
                     note qq:to/HERE/;
-                    DEBUG: Line $linenum: found ending heredoc label '$heredoc-label' 
+                    DEBUG: Line $linenum: found ending heredoc label '$heredoc-label'
                       for heredoc type '{$L.open-heredoc.type}', indent: $heredoc-indent.
                     HERE
                 }
@@ -285,8 +324,8 @@ sub lint(
             #elsif $in-pod-block {
             elsif $pod-parent {
 
-# TODO Need to use a more complex approach since some pod 
-#      blocks can contain others and some not. For 
+# TODO Need to use a more complex approach since some pod
+#      blocks can contain others and some not. For
 #      example, =begin/=end pod can contain other
 #      pod blocks, but =begin/=end comments mask
 #      pod blocks inside.
@@ -294,7 +333,7 @@ sub lint(
 #      But indentation is critical for all such blocks
 #      even though parent blocks may have more indentation
 #      than child blocks.
- 
+
                 note "DEBUG: \$pod-parent is True on line $linenum" if $debug;
                 # the only text on the line should be: '{$indent-spaces}=end \h+ {$typename} \h*'
                 if $line !~~ /^ $pod-indent-str '=' end \h+ $pod-label / {
@@ -304,7 +343,7 @@ sub lint(
                 # we must have found the ending label, so...
                 if $debug {
                     note qq:to/HERE/;
-                    DEBUG: Line $linenum: found ending pod block typename '$pod-label' 
+                    DEBUG: Line $linenum: found ending pod block typename '$pod-label'
                       for pod block type '{$L.open-pod-block.tail.type}'
                     HERE
                 }
@@ -330,16 +369,31 @@ sub lint(
                 next LINE;
             }
 
-            # check pod and heredoc pod beginners
-            if $line ~~ /^ (\h*) '=' begin \h+ (<alpha><alnum>+) \h*/ {
-	        my $type = "Pod-begin";
+            # check pod begin/end
+            if $line ~~ /^ (\h*) '=' (begin|end) \h+ (<alpha><alnum>+) \h*/ {
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+
+	        my $type  = "pod";
                 $pod-indent-str = ~$0;
-                $pod-label      = ~$1;
-                #$in-pod-block   = 1;
+                my $typ         = ~$1;
+                $pod-label      = ~$2;
                 $pod-indent     = $pod-indent-str.chars;
 
-                my $LT = LType.new: :$type, :label($pod-label), :$linenum, :indent-str($pod-indent-str);
+                my $begin = $typ eq 'begin' ?? True !! False;
+
+                # is this a pod parent?
+                # TODO handle this properly
+                my $is-parent = False;
+
+                my $LT = LType.new:
+                :$type,
+                :$begin,
+                :$is-parent,
+                :label($pod-label),
+                :$linenum,
+                :indent-str($pod-indent-str),
+                ;
+
                 $LL.types.push($LT);
 
                 # reportable
@@ -351,9 +405,10 @@ sub lint(
                 next LINE;
             }
 
+            # check heredocs
             if $line ~~ / '=' \h* '<<' <['"]> (<alpha><alnum>+) <['"]> / {
 
-	        my $type = "Perl-heredoc";
+	        my $type = "perl-heredoc";
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
                 $heredoc-label = ~$0;
                 $in-heredoc    = 1;
@@ -374,7 +429,7 @@ sub lint(
             }
 
             if $line ~~ / [q|qq] ':' [to|heredoc] '/' (<alpha><alnum>+) '/'  / {
-                my $type = "Raku-heredoc";
+                my $type = "heredoc";
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
                 $heredoc-label = ~$0;
                 $in-heredoc    = 1;
@@ -399,23 +454,6 @@ sub lint(
             loop {
                 my $x = 0;
 
-                if $line ~~ /^ \s* '=' (begin|end) \s+ (<alpha><alnum>+) / {
-	       	    my $type  = ~$0;
-		    my $label = ~$1;
-                    $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-
-                    my $LT = LType.new: :$type, :$linenum;
-                    $LL.types.push($LT);
-                    $LT.label = $label;
-		    # get the indentation amount
-		    $LT.indent = index $line, '=';
-
-                    $L.record-pod-type: $LT;
-                    # should only be one per line
-
-                    $line = paste $/;
-                    ++$x;
-                }
 
                 if $line ~~ / <<open>> / {
 		    my $type = 'open';
