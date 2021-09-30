@@ -10,10 +10,13 @@ class LType is export {
     has $.label;
 
     # delimited pod block begin/end
+    # also heredoc begin/end
     has $.begin;
     has $.end;
+    # delimited pod block begin
     has $.is-parent;
 
+    # delimited pod block begin/end
     has $.indent is rw = 0;
     has $.indent-str;
 
@@ -103,7 +106,7 @@ class Linter is export {
     my %end;        # number of types: end
     =end comment
 
-    has %.types          is rw; # count by types
+    has %.types           is rw; # count by types
     has @.misc-stack      is rw; # track matching begin/end pairs
     # All delimited pod blocks (except comment) can be parents
     has @.pod-stack      is rw; # track matching begin/end pairs
@@ -255,8 +258,9 @@ sub lint(
         # for heredocs (note the compiler warns of indentation
         # problems so we don't worry about it, at least not yet)
         my $in-heredoc;
-        my $heredoc-label;  # terminator
-        my $heredoc-indent; # num spaces, determined at termination
+        my $heredoc-label;      # terminator
+        my $heredoc-indent;     # num spaces, determined at termination
+        my $heredoc-min-indent = Inf; # check on every line before termination
 
         # for pod =begin/=end blocks
         my $pod-parent = 0;
@@ -286,14 +290,22 @@ sub lint(
                 note "DEBUG: \$in-heredoc is True on line $linenum" if $debug;
                 # the only word on the line should be the ending label (terminator), but we
                 # need to save the line data and its identation for analyis
+                my $indent = indent $line;
                 if $line !~~ /$heredoc-label/ {
-                    my $indent = indent $line;
-# TODO complete this
+                    if $indent < $heredoc-min-indent { 
+                        # check on every line before termination:
+                        $heredoc-min-indent = $indent;
+                    }
                     next LINE;
                 }
 
                 # we must have found the ending label, so...
-                $heredoc-indent = indent $line;
+                $heredoc-indent = $indent;
+                # compare with what was seen
+                if $heredoc-min-indent < $heredoc-indent {
+                    # TODO fix reporting
+                }
+
                 if $debug {
                     note qq:to/HERE/;
                     DEBUG: Line $linenum: found heredoc terminator '$heredoc-label'
@@ -301,10 +313,10 @@ sub lint(
                     HERE
                 }
 
-                $in-heredoc = 0;
 		my $type  = "heredoc";
 
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
+                        $heredoc-min-indent = $indent;
                 my $LT = LType.new: :$type, :$linenum;
                 $LL.types.push($LT);
 
@@ -317,6 +329,10 @@ sub lint(
                 ++$err if $opener.label ne $heredoc-label;
                 ++$err if $opener.type !~~ /heredoc/;
                 die "FATAL: Unexpected \$open-heredoc errors" if $err;
+
+                # reset
+                $in-heredoc = 0;
+                $heredoc-min-indent = Inf;
                 $L.open-heredoc = 0;
 
                 next LINE;
