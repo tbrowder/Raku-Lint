@@ -1,8 +1,25 @@
 Handling delimited pod blocks:
+=============================
 
-Maintain a stack of open blocks.
+Maintain a stack of open pod blocks. The head 
+block, if any, is a "parent" block and may have
+child blocks.
 
-When finding a closed one, it should
-match the top opened one; otherwise
-its an error.
+Dealing with line types:
+
+  if a line is a begin line
+      push this to the open block stack
+
+  elsif a line is an end line
+      if there is a parent block
+         check that the tail label matches, else an error
+         if the head matches the tail
+             we are out of pod, append the parent to
+                the parent stack and empty the open block stack
+
+  elsif there is an open block element 
+      next line
+
+Note it is an error to have both an open pod block
+and be in a heredoc.
 
