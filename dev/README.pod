@@ -5,6 +5,8 @@ Maintain a stack of open pod blocks. The head
 block, if any, is a "parent" block and may have
 child blocks.
 
+Also have another stack to ensure nesting is correct.
+
 Dealing with line types:
 
   if a line is a begin line
@@ -14,12 +16,23 @@ Dealing with line types:
       if there is a parent block
          check that the tail label matches, else an error
          if the head matches the tail
-             we are out of pod, append the parent to
+             we are out of pod, push the parent to
                 the parent stack and empty the open block stack
 
   elsif there is an open block element 
       next line
 
-Note it is an error to have both an open pod block
-and be in a heredoc.
+Note it is an error to have both an open pod block element
+AND be in a heredoc.
+
+Example:
+
+b1
+ b2
+  b3
+  e3
+ e2
+ b4
+ e4
+e1
 
