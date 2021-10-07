@@ -286,7 +286,7 @@ sub lint(
         my @pod-blocks;     # temp stack of begin/end elements
 
 	LINE: for $fname.IO.lines.kv -> $linenum is copy, $line is copy {
-            ++$linenum; # make line numbers indexed from one
+            ++$linenum; # make line numbers be indexed from one
             # ignore normal comments?
             if $strip and $last {
                 $line = strip-comment $line, :$last;
@@ -333,7 +333,7 @@ sub lint(
 		my $type  = "heredoc";
 
                 $LL = set-get-LLine $LL, :$linenum, :$line, :linter($L);
-                        $heredoc-min-indent = $indent;
+                $heredoc-min-indent = $indent;
                 my $LT = LType.new: :$type, :$linenum, :label($heredoc-label);
                 $LL.types.push($LT);
 
